@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akona Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="/styles.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/Akona-logo.png">
+
+    <script>
+        // 🔒 SECURITY & ROLE CHECK
+        const token = localStorage.getItem("token");
+        const userRole = localStorage.getItem("role");
+
+        if (!token) {
+            window.location.href = "/";
+        } 
+        else if (userRole === 'company') {
+            window.location.href = "/form.html";
+        }
+
+        function parseJwt(token) {
+            try { return JSON.parse(atob(token.split('.')[1])); } 
+            catch (e) { return { sub: "User" }; }
+        }
+        const currentUsername = parseJwt(token).sub || "Admin";
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <div class="md:hidden flex items-center justify-between bg-akona-dark text-white p-4 shadow-md sticky top-0 z-20">
+        <div class="flex items-center gap-3">
+            <img src="Akona-logo.png" alt="Akona" class="w-8 rounded-full border border-akona-gold" onerror="this.src='Akona-logo.png'">
+            <span class="font-bold text-akona-gold tracking-wide">AKONA</span>
+        </div>
+        <button onclick="toggleSidebar()" class="text-white focus:outline-none">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+
+    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden transition-opacity opacity-0"></div>
+
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-64 h-full bg-akona-dark text-white flex flex-col shadow-2xl z-30 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        
+        <div class="md:hidden absolute top-4 right-4">
+            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div class="p-8 text-center border-b border-white/10">
+            <img src="Akona-logo.png" alt="Akona" class="w-24 mx-auto mb-4 rounded-full border-2 border-akona-gold p-1" onerror="this.src='Akona-logo.png'">
+        </div>
+
+        <div class="p-4 text-center bg-black/20 text-sm text-gray-300 border-b border-white/10">
+            Logged in as:
+            <div id="display-username" class="text-akona-gold font-bold text-lg mt-1">...</div>
+        </div>
+
+        <div class="flex-1 py-6 space-y-1 overflow-y-auto">
+            <div onclick="showSection('contracts', this); closeSidebarOnMobile()" class="nav-item active px-6 py-4 cursor-pointer transition flex items-center gap-3 border-l-4 border-akona-gold bg-white/10 text-akona-gold font-medium">
+                📄 Työsopimukset
+            </div>
+            
+            <div onclick="showSection('minutes', this); closeSidebarOnMobile()" class="nav-item px-6 py-4 cursor-pointer transition flex items-center gap-3 border-l-4 border-transparent hover:bg-white/5 hover:text-akona-gold font-medium">
+                📝 Pöytäkirjat
+            </div>
+
+            <div onclick="window.location.href='/form.html'" class="nav-item px-6 py-4 cursor-pointer transition flex items-center gap-3 border-l-4 border-transparent hover:bg-white/5 hover:text-akona-gold font-medium">
+                ➕ New Työsopimus
+            </div>
+
+            <div onclick="window.location.href='/poytakirja_form.html'" class="nav-item px-6 py-4 cursor-pointer transition flex items-center gap-3 border-l-4 border-transparent hover:bg-white/5 hover:text-akona-gold font-medium">
+                ➕ New Pöytäkirja
+            </div>
+
+            <div id="users-tab" onclick="showSection('users', this); closeSidebarOnMobile()" class="nav-item hidden px-6 py-4 cursor-pointer transition flex items-center gap-3 border-l-4 border-transparent hover:bg-white/5 hover:text-akona-gold font-medium">
+                👤 Users
+            </div>
+        </div>
+
+        <button onclick="logout()" class="px-5 py-2 border-2 border-akona-gold text-akona-gold font-bold rounded hover:bg-akona-gold hover:text-akona-dark transition m-6">
+            Logout
+        </button>
+    </div>
+
+    <div class="md:ml-64 p-4 md:p-10 transition-all duration-300">
+        
+        <div id="contracts" class="section block">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-100 gap-4">
+                <h1 class="text-xl md:text-2xl font-bold text-akona-dark">All Contracts</h1>
+                <button onclick="window.location.href='/form.html'" class="w-full md:w-auto px-5 py-2 bg-akona-gold text-akona-dark font-bold rounded hover:bg-akona-darkgold hover:text-white transition">
+                    + New Contract
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-600">
+                            <th class="p-4 font-bold">ID</th>
+                            <th class="p-4 font-bold">Date</th>
+                            <th class="p-4 font-bold">Created By</th>
+                            <th class="p-4 font-bold">Employer</th>
+                            <th class="p-4 font-bold">Employee</th>
+                            <th class="p-4 font-bold">Sector</th>
+                            <th class="p-4 font-bold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contracts-list" class="divide-y divide-gray-100">
+                        <tr><td colspan="7" class="p-8 text-center text-gray-500">Loading contracts...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="minutes" class="section hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-100 gap-4">
+                <h1 class="text-xl md:text-2xl font-bold text-akona-dark">Meeting Minutes (Pöytäkirjat)</h1>
+                <button onclick="window.location.href='/poytakirja_form.html'" class="w-full md:w-auto px-5 py-2 bg-akona-gold text-akona-dark font-bold rounded hover:bg-akona-darkgold hover:text-white transition">
+                    + New Pöytäkirja
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-600">
+                            <th class="p-4 font-bold">ID</th>
+                            <th class="p-4 font-bold">Generated On</th>
+                            <th class="p-4 font-bold">Created By</th>
+                            <th class="p-4 font-bold">Organization</th>
+                            <th class="p-4 font-bold">Meeting Name</th>
+                            <th class="p-4 font-bold">Meeting Date</th>
+                            <th class="p-4 font-bold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="minutes-list" class="divide-y divide-gray-100">
+                        <tr><td colspan="7" class="p-8 text-center text-gray-500">Loading minutes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="users" class="section hidden">
+            <div class="flex justify-between items-center mb-8 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h1 class="text-xl md:text-2xl font-bold text-akona-dark">User Management</h1>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-4 items-end">
+                <div class="w-full md:flex-1">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Username</label>
+                    <input type="text" id="new-username" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-akona-gold outline-none">
+                </div>
+                <div class="w-full md:flex-1">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Password</label>
+                    <input type="text" id="new-password" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-akona-gold outline-none">
+                </div>
+                <div class="w-full md:flex-1">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Role</label>
+                    <select id="new-role" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-akona-gold outline-none bg-white">
+                        <option value="staff">Staff (View Only)</option>
+                        <option value="company">Company / Trainee (Form Only)</option>
+                        <option value="admin">Admin (Full Access)</option>
+                    </select>
+                </div>
+                <button onclick="createUser()" class="w-full md:w-auto px-6 py-2 bg-akona-gold text-akona-dark font-bold rounded hover:bg-akona-darkgold hover:text-white transition shadow-sm">
+                    + Create
+                </button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
+                <table class="w-full text-left min-w-[600px]">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-600">
+                            <th class="p-4 font-bold">ID</th>
+                            <th class="p-4 font-bold">Username</th>
+                            <th class="p-4 font-bold">Role</th>
+                            <th class="p-4 font-bold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-list" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const apiToken = localStorage.getItem("token");
+        
+        document.getElementById("display-username").innerText = currentUsername;
+
+        if (userRole === 'admin') {
+            document.getElementById('users-tab').classList.remove('hidden');
+            document.getElementById('users-tab').classList.add('flex');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+        function closeSidebarOnMobile() {
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        function showSection(id, element) {
+            document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('block'));
+            
+            document.querySelectorAll('.nav-item').forEach(el => {
+                if(el.getAttribute('onclick') && el.getAttribute('onclick').includes('showSection')) {
+                    el.classList.remove('border-akona-gold', 'bg-white/10', 'text-akona-gold');
+                    el.classList.add('border-transparent', 'hover:bg-white/5', 'hover:text-akona-gold');
+                }
+            });
+            
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('block');
+            
+            if(element) {
+                element.classList.remove('border-transparent', 'hover:bg-white/5');
+                element.classList.add('border-akona-gold', 'bg-white/10', 'text-akona-gold');
+            }
+            
+            // Call the correct fetch function
+            if(id === 'contracts') loadContracts();
+            if(id === 'minutes') loadMinutes(); // Load minutes when tab is clicked
+            if(id === 'users') loadUsers();
+        }
+
+        async function loadContracts() {
+            try {
+                const res = await fetch("/admin/dashboard", { headers: { "Authorization": "Bearer " + apiToken } });
+                if(res.status === 401) return logout();
+                
+                const data = await res.json();
+                const tbody = document.getElementById("contracts-list");
+                tbody.innerHTML = "";
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500">No contracts found.</td></tr>`;
+                    return;
+                }
+
+                data.forEach(c => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="p-4 text-gray-600 font-mono text-sm">#${c.id}</td>
+                            <td class="p-4 whitespace-nowrap">${c.created_at}</td>
+                            <td class="p-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 whitespace-nowrap">
+                                    👤 ${c.created_by}
+                                </span>
+                            </td>
+                            <td class="p-4 font-bold text-gray-800">${c.employer_name}</td>
+                            <td class="p-4">${c.employee_firstname} ${c.employee_lastname}</td>
+                            <td class="p-4"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs border border-gray-200 font-medium">${c.sector}</span></td>
+                            <td class="p-4">
+                                <a href="${c.pdf_url}" target="_blank" class="inline-flex items-center gap-1 px-3 py-1 text-sm font-bold text-akona-dark border border-akona-gold rounded hover:bg-akona-gold transition duration-200">
+                                    ⬇ PDF
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        // --- NEW: FETCH MINUTES ---
+        async function loadMinutes() {
+            try {
+                const res = await fetch("/minutes/list", { headers: { "Authorization": "Bearer " + apiToken } });
+                if(res.status === 401) return logout();
+                
+                const data = await res.json();
+                const tbody = document.getElementById("minutes-list");
+                tbody.innerHTML = "";
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500">No meeting minutes found.</td></tr>`;
+                    return;
+                }
+
+                data.forEach(m => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="p-4 text-gray-600 font-mono text-sm">#${m.id}</td>
+                            <td class="p-4 whitespace-nowrap">${m.created_at}</td>
+                            <td class="p-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-700 whitespace-nowrap">
+                                    👤 ${m.created_by}
+                                </span>
+                            </td>
+                            <td class="p-4 font-bold text-gray-800">${m.organization}</td>
+                            <td class="p-4">${m.meeting_name}</td>
+                            <td class="p-4">${m.date}</td>
+                            <td class="p-4">
+                                <a href="${m.pdf_url}" target="_blank" class="inline-flex items-center gap-1 px-3 py-1 text-sm font-bold text-akona-dark border border-akona-gold rounded hover:bg-akona-gold transition duration-200">
+                                    ⬇ PDF
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadUsers() {
+            if (userRole !== 'admin') return;
+            const res = await fetch("/admin/users", { headers: { "Authorization": "Bearer " + apiToken } });
+            if(res.status === 403) return; 
+            const data = await res.json();
+            const tbody = document.getElementById("users-list");
+            tbody.innerHTML = "";
+            data.forEach(u => {
+                let badgeColor = "bg-gray-100 text-gray-700";
+                if(u.role === 'admin') badgeColor = "bg-blue-50 text-blue-700 border-blue-100";
+                if(u.role === 'company') badgeColor = "bg-green-50 text-green-700 border-green-100";
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-4 text-gray-500">#${u.id}</td>
+                        <td class="p-4 font-medium">${u.username}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-xs border font-bold uppercase ${badgeColor}">${u.role}</span></td>
+                        <td class="p-4">
+                            <button onclick="deleteUser(${u.id})" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded text-sm font-medium transition">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function createUser() {
+            const username = document.getElementById("new-username").value;
+            const password = document.getElementById("new-password").value;
+            const role = document.getElementById("new-role").value;
+            if(!username || !password) return alert("Please fill in all fields");
+
+            const res = await fetch("/admin/users", {
+                method: "POST",
+                headers: { "Authorization": "Bearer " + apiToken, "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password, role })
+            });
+            if(res.ok) {
+                alert("✅ User created successfully!");
+                document.getElementById("new-username").value = "";
+                document.getElementById("new-password").value = "";
+                loadUsers(); 
+            } else {
+                const err = await res.json();
+                alert("Error: " + err.detail);
+            }
+        }
+
+        async function deleteUser(id) {
+            if(!confirm("Are you sure?")) return;
+            const res = await fetch(`/admin/users/${id}`, { method: "DELETE", headers: { "Authorization": "Bearer " + apiToken } });
+            if(res.ok) loadUsers();
+            else { const err = await res.json(); alert("Error: " + err.detail); }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "/";
+        }
+
+        if (document.getElementById('contracts').classList.contains('block')) {
+            loadContracts();
+        }
+    </script>
+</body>
+</html>

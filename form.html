@@ -1,0 +1,48 @@
+import os
+import base64
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import (
+    Mail, Attachment, FileContent, FileName, 
+    FileType, Disposition
+)
+
+def send_email(to_email, subject, body, file_path=None):
+    api_key = os.getenv("SENDGRID_KEY")
+    sender = os.getenv("SENDER_EMAIL")
+
+    if not api_key or not sender:
+        print(f"⚠️ Mock Email -> To: {to_email} | Subject: {subject}")
+        return
+
+    message = Mail(
+        from_email=sender,
+        to_emails=to_email,
+        subject=subject,
+        plain_text_content=body
+    )
+
+    # Attach PDF Logic
+    if file_path and os.path.exists(file_path):
+        try:
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            
+            encoded_file = base64.b64encode(data).decode()
+
+            attached_file = Attachment(
+                FileContent(encoded_file),
+                FileName(os.path.basename(file_path)),
+                FileType('application/pdf'),
+                Disposition('attachment')
+            )
+            message.add_attachment(attached_file)
+            print(f"📎 Attached file: {os.path.basename(file_path)}")
+        except Exception as e:
+            print(f"❌ Attachment Error: {e}")
+
+    try:
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+        print(f"✅ Email sent to {to_email} (Status: {response.status_code})")
+    except Exception as e:
+        print(f"❌ SendGrid Error: {e}")

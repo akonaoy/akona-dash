@@ -1,0 +1,38 @@
+import os
+from supabase import create_client, Client
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+BUCKET_NAME = os.getenv("BUCKET_NAME", "documents")
+
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Notice we added 'folder' as an argument here!
+def upload_file(file_path: str, folder: str = "misc") -> str:
+    if not supabase:
+        print("⚠️ Supabase keys not set. Falling back to local file path.")
+        return file_path
+
+    file_name = os.path.basename(file_path)
+    
+    # This creates the folder structure! (e.g., "minutes/Poytakirja_Akona.pdf")
+    storage_path = f"{folder}/{file_name}"
+    
+    try:
+        with open(file_path, "rb") as f:
+            supabase.storage.from_(BUCKET_NAME).upload(
+                file=f,
+                path=storage_path,  # Uploads to the specific folder
+                file_options={"content-type": "application/pdf"}
+            )
+        
+        # Get the URL using the full folder path
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(storage_path)
+        print(f"✅ Uploaded to Supabase: {public_url}")
+        return public_url
+        
+    except Exception as e:
+        print(f"❌ Supabase Upload Error: {e}")
+        return file_path
